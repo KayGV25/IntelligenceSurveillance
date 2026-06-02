@@ -3,6 +3,7 @@ package com.ahs.api_gateway.exception;
 import com.ahs.common.error.ErrorCode;
 import com.ahs.common.error.ErrorKey;
 import com.ahs.common.response.ApiResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.webflux.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -15,13 +16,10 @@ import tools.jackson.databind.ObjectMapper;
 
 @Component
 @Order(-2)
+@RequiredArgsConstructor
 public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
 
-    private final ObjectMapper objectMapper;
-
-    public GlobalExceptionHandler(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    private final ErrorResponseWriter errorResponseWriter;
 
     @Override
     public Mono<Void> handle(
@@ -54,28 +52,17 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
                 code = ErrorCode.BAD_REQUEST;
                 key = ErrorKey.INVALID_REQUEST;
                 message = "Bad request";
+            } else if (status == HttpStatus.SERVICE_UNAVAILABLE) {
+                code = ErrorCode.SERVICE_UNAVAILABLE;
+                key = ErrorKey.SERVICE_UNAVAILABLE;
+                message = "Service unavailable";
+            } else if (status == HttpStatus.TOO_MANY_REQUESTS) {
+                code = ErrorCode.RATE_LIMITED;
+                key = ErrorKey.RATE_LIMIT_EXCEEDED;
+                message = "Too many requests";
             }
         }
-        exchange.getResponse().setStatusCode(status);
-        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
-        ApiResponse<Void> body = ApiResponse.failure(
-                code.name(),
-                key.name(),
-                message
-        );
-
-        byte[] bytes;
-
-        try {
-            bytes = objectMapper.writeValueAsBytes(body);
-        } catch (Exception e) {
-            bytes = "{}".getBytes();
-        }
-
-        return exchange.getResponse()
-                .writeWith(Mono.just(exchange.getResponse()
-                        .bufferFactory()
-                        .wrap(bytes)));
+        return errorResponseWriter.write(exchange, status, code, key, message);
     }
 }

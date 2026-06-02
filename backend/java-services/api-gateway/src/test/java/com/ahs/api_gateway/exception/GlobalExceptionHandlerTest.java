@@ -17,7 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class GlobalExceptionHandlerTest {
 
-    private final GlobalExceptionHandler handler = new GlobalExceptionHandler(new ObjectMapper());
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler(
+            new ErrorResponseWriter(new ObjectMapper())
+    );
 
     @ParameterizedTest
     @MethodSource("gatewayErrors")
@@ -37,9 +39,8 @@ class GlobalExceptionHandlerTest {
         assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
         assertThat(exchange.getResponse().getBodyAsString().block())
                 .contains("\"success\":false")
-                .contains("\"code\":\"" + code + "\"")
-                .contains("\"key\":\"" + key + "\"")
-                .contains("\"message\":\"" + message + "\"");
+                .contains("\"error\":{\"code\":\"" + code + "\",\"key\":\"" + key + "\",\"message\":\"" + message + "\"")
+                .contains("\"timestamp\":");
     }
 
     @Test
@@ -54,9 +55,8 @@ class GlobalExceptionHandlerTest {
         assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
         assertThat(exchange.getResponse().getBodyAsString().block())
                 .contains("\"success\":false")
-                .contains("\"code\":\"INTERNAL_ERROR\"")
-                .contains("\"key\":\"INTERNAL_SERVER_ERROR\"")
-                .contains("\"message\":\"Internal server error\"");
+                .contains("\"error\":{\"code\":\"INTERNAL_ERROR\",\"key\":\"INTERNAL_SERVER_ERROR\",\"message\":\"Internal server error\"")
+                .contains("\"timestamp\":");
     }
 
     private static Stream<Arguments> gatewayErrors() {
@@ -64,7 +64,9 @@ class GlobalExceptionHandlerTest {
                 Arguments.of(HttpStatus.NOT_FOUND, "NOT_FOUND", "ROUTE_NOT_FOUND", "Route not found"),
                 Arguments.of(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "INSUFFICIENT_PERMISSION", "Unauthorized"),
                 Arguments.of(HttpStatus.FORBIDDEN, "FORBIDDEN", "INSUFFICIENT_PERMISSION", "Forbidden"),
-                Arguments.of(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "INVALID_REQUEST", "Bad request")
+                Arguments.of(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "INVALID_REQUEST", "Bad request"),
+                Arguments.of(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE", "SERVICE_UNAVAILABLE", "Service unavailable"),
+                Arguments.of(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "RATE_LIMIT_EXCEEDED", "Too many requests")
         );
     }
 }
