@@ -24,7 +24,7 @@ public class ApiGatewayRouteConfig {
                         .filters(filter -> filter.requestRateLimiter(config -> config
                                 .setRateLimiter(redisRateLimiter)
                                 .setKeyResolver(resolver)))
-                        .uri(properties.alertServiceUrl()))
+                        .uri(properties.authServiceUrl()))
 
                 .route("camera-service", route -> route
                         .path("/api/v1/cameras/**")
