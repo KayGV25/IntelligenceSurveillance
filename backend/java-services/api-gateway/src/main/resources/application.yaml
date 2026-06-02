@@ -1,0 +1,55 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+management:
+  health:
+    discovery:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+ahs:
+  security:
+    jwt-enabled: ${JWT_ENABLED:false}
+
+  services:
+    auth-service-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+    camera-service-url: ${CAMERA_SERVICE_URL:http://localhost:8101}
+    map-service-url: ${MAP_SERVICE_URL:http://localhost:8105}
+    alert-service-url: ${ALERT_SERVICE_URL:http://localhost:8106}
+    incident-service-url: ${INCIDENT_SERVICE_URL:http://localhost:8107}
+    tracking-service-url: ${TRACKING_SERVICE_URL:http://localhost:8108}
+    playback-service-url: ${PLAYBACK_SERVICE_URL:http://localhost:8104}
+
+logging:
+  structured:
+    format:
+      console: logstash
+  level:
+    root: WARN
+
+    com.ahs.api_gateway: INFO
+
+    org.springframework.boot: WARN
+    org.springframework.security: WARN
+    org.springframework.data: WARN
+    org.springframework.cloud.gateway: WARN
+    org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator: WARN
+    org.springframework.web: WARN
+    org.springframework.web.reactive: WARN
+    org.springdoc: ERROR
+    reactor.netty: WARN
