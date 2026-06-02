@@ -9,7 +9,7 @@ public record ApiResponse<T>(
         Instant timestamp
 ) {
         public static <T> ApiResponse<T> success(T data) {
-            return new ApiResponse<>(
+            return new ApiResponse<T>(
                     true,
                     data,
                     null,
@@ -22,7 +22,7 @@ public record ApiResponse<T>(
                 String key,
                 String message
         ) {
-            return new ApiResponse<>(
+            return new ApiResponse<T>(
                     false,
                     null,
                     new ApiErrorResponse(code, key, message),
