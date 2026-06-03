@@ -24,7 +24,9 @@ management:
 
 ahs:
   security:
-    jwt-enabled: ${JWT_ENABLED:false}
+    jwt-enabled: ${JWT_ENABLED:true}
+    jwt-issuer: ${JWT_ISSUER:ahs-auth-service}
+    jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
 
   services:
     auth-service-url: ${AUTH_SERVICE_URL:http://localhost:8081}

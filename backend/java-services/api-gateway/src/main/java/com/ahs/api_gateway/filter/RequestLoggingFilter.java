@@ -2,6 +2,7 @@ package com.ahs.api_gateway.filter;
 
 import com.ahs.api_gateway.context.GatewayRequestContext;
 import com.ahs.common.observability.AuditAction;
+import com.ahs.common.observability.RequestIdGenerator;
 import com.ahs.common.observability.TraceConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -139,7 +140,7 @@ public class RequestLoggingFilter implements WebFilter, Ordered {
     private String getOrCreateHeader(ServerHttpRequest request, String headerName) {
         String value = request.getHeaders().getFirst(headerName);
         return value == null || value.isBlank()
-                ? UUID.randomUUID().toString()
+                ? RequestIdGenerator.generate()
                 : value;
     }
 
