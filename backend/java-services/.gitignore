@@ -52,3 +52,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+**/src/main/resources/keys/private.pem
+**/src/main/resources/keys/*.key
