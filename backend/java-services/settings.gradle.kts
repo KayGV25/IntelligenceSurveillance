@@ -17,6 +17,7 @@ rootProject.name = "ahs-java-services"
 
 include(
     "api-gateway",
+    "auth-service",
     "libs:common-response",
     "libs:common-error",
     "libs:common-security",
