@@ -4,6 +4,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "ahs.security")
 public record SecurityProperties(
-    boolean jwtEnabled
+        boolean jwtEnabled,
+        String jwtIssuer,
+        String jwkSetUri
 ) {
 }
