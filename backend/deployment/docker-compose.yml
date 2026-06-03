@@ -19,6 +19,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - ahs-network
 
   redis:
     image: redis:7-alpine
@@ -34,6 +36,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - ahs-network
 
   redpanda:
     image: redpandadata/redpanda:v26.1.9
@@ -66,6 +70,8 @@ services:
       interval: 15s
       timeout: 10s
       retries: 10
+    networks:
+      - ahs-network
 
   redpanda-console:
     image: redpandadata/console:v2.8.15
@@ -79,6 +85,8 @@ services:
       SERVER_LISTENPORT: 8080
     ports:
       - "${REDPANDA_CONSOLE_PORT}:8080"
+    networks:
+      - ahs-network
 
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z
@@ -98,6 +106,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - ahs-network
 
   minio-init:
     image: minio/mc:RELEASE.2025-04-16T18-13-26Z
@@ -114,6 +124,8 @@ services:
       mc mb --ignore-existing local/${MINIO_EVIDENCE_BUCKET};
       exit 0;
       "
+    networks:
+      - ahs-network
 
   qdrant:
     image: qdrant/qdrant:v1.14.1
@@ -129,6 +141,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - ahs-network
 
   api-gateway:
     build:
@@ -159,6 +173,8 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_started
+    networks:
+      - ahs-network
 
   auth-service:
     build:
@@ -187,6 +203,41 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - ahs-network
+
+  camera-service:
+    build:
+      context: ../go-services/camera-service
+      dockerfile: Dockerfile
+    container_name: ahs-camera-service
+    ports:
+      - "8101:8101"
+    environment:
+      APP_PORT: 8101
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_SSLMODE: disable
+
+      REDPANDA_BROKERS: redpanda:9092
+
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_SNAPSHOTS_BUCKET: ${MINIO_SNAPSHOTS_BUCKET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - ahs-network
 
 volumes:
   postgres_data:
