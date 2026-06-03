@@ -16,20 +16,20 @@ COPY api-gateway/build.gradle.kts api-gateway/build.gradle.kts
 COPY auth-service/build.gradle.kts auth-service/build.gradle.kts
 
 RUN chmod +x gradlew
-RUN ./gradlew :api-gateway:dependencies --no-daemon
+RUN ./gradlew :auth-service:dependencies --no-daemon
 
 COPY libs libs
 COPY api-gateway/src api-gateway/src
 COPY auth-service/src auth-service/src
 
-RUN ./gradlew :api-gateway:bootJar --no-daemon
+RUN ./gradlew :auth-service:bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-COPY --from=build /workspace/api-gateway/build/libs/*.jar app.jar
+COPY --from=build /workspace/auth-service/build/libs/*.jar app.jar
 
-EXPOSE 8080
+EXPOSE 8081
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

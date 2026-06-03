@@ -1,0 +1,60 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: auth-service
+
+  r2dbc:
+    url: r2dbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:ahs_dev}
+    username: ${POSTGRES_USER:ahs_user}
+    password: ${POSTGRES_PASSWORD:ahs_password}
+
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:ahs_dev}
+    user: ${POSTGRES_USER:ahs_user}
+    password: ${POSTGRES_PASSWORD:ahs_password}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+ahs:
+  auth:
+    issuer: ${AUTH_ISSUER:ahs-auth-service}
+    access-token-minutes: ${ACCESS_TOKEN_MINUTES:15}
+    refresh-token-days: ${REFRESH_TOKEN_DAYS:30}
+    key-id: ${JWT_KEY_ID:ahs-dev-key-1}
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:classpath:keys/private.pem}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:keys/public.pem}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash
+
+  level:
+    root: WARN
+    com.ahs.auth_service: INFO
+    org.springframework.security: WARN
+    org.springframework.data: WARN
+    org.springdoc: ERROR

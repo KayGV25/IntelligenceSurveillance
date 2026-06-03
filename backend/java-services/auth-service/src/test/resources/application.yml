@@ -1,0 +1,18 @@
+spring:
+  flyway:
+    enabled: false
+
+  r2dbc:
+    url: r2dbc:h2:mem:///auth_service_test;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+management:
+  health:
+    redis:
+      enabled: false
