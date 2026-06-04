@@ -8,6 +8,7 @@ import (
 
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/config"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/database"
+	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/event"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/repository"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/router"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/service"
@@ -25,7 +26,10 @@ func main() {
 	defer db.Close()
 
 	cameraRepo := repository.NewCameraRepository(db)
-	cameraService := service.NewCameraService(cameraRepo)
+	eventPublisher := event.NewKafkaPublisher(cfg.RedpandaBrokers)
+	defer eventPublisher.Close()
+
+	cameraService := service.NewCameraService(cameraRepo, eventPublisher)
 
 	r := router.NewRouter(cameraService)
 

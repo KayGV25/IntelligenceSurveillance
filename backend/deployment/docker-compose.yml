@@ -82,9 +82,9 @@ services:
         condition: service_healthy
     environment:
       KAFKA_BROKERS: redpanda:9092
-      SERVER_LISTENPORT: 8080
+      SERVER_LISTENPORT: 8088
     ports:
-      - "${REDPANDA_CONSOLE_PORT}:8080"
+      - "${REDPANDA_CONSOLE_PORT}:8088"
     networks:
       - ahs-network
 
@@ -245,3 +245,7 @@ volumes:
   redpanda_data:
   minio_data:
   qdrant_data:
+
+networks:
+  ahs-network:
+    driver: bridge
