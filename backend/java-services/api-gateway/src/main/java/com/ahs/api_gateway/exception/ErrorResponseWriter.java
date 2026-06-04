@@ -25,6 +25,10 @@ public class ErrorResponseWriter {
             ErrorKey key,
             String message
     ) {
+        if (exchange.getResponse().isCommitted()) {
+            return Mono.empty();
+        }
+        
         exchange.getResponse().setStatusCode(status);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
 

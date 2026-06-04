@@ -30,6 +30,10 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
         ErrorCode code = ErrorCode.INTERNAL_ERROR;
         ErrorKey key = ErrorKey.INTERNAL_SERVER_ERROR;
         String message = "Internal server error";
+        
+        if (exchange.getResponse().isCommitted()) {
+            return Mono.empty();
+        }
 
         if (ex instanceof ResponseStatusException responseStatusException) {
             status = HttpStatus.valueOf(
