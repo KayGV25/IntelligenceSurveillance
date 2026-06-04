@@ -1,6 +1,6 @@
 package com.ahs.api_gateway.config;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.cloud.gateway.route.RouteLocator;
@@ -9,12 +9,24 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@RequiredArgsConstructor
 public class ApiGatewayRouteConfig {
 
     private final ApiGatewayProperties properties;
     private final RedisRateLimiter redisRateLimiter;
+    private final RedisRateLimiter loginRedisRateLimiter;
     private final KeyResolver resolver;
+
+    public ApiGatewayRouteConfig(
+            ApiGatewayProperties properties,
+            @Qualifier("redisRateLimiter") RedisRateLimiter redisRateLimiter,
+            @Qualifier("loginRedisRateLimiter") RedisRateLimiter loginRedisRateLimiter,
+            KeyResolver resolver
+    ) {
+        this.properties = properties;
+        this.redisRateLimiter = redisRateLimiter;
+        this.loginRedisRateLimiter = loginRedisRateLimiter;
+        this.resolver = resolver;
+    }
 
     @Bean
     public RouteLocator apiGatewayRoutes(RouteLocatorBuilder builder) {
@@ -22,7 +34,7 @@ public class ApiGatewayRouteConfig {
                 .route("auth-service", route -> route
                         .path("/api/v1/auth/**")
                         .filters(filter -> filter.requestRateLimiter(config -> config
-                                .setRateLimiter(redisRateLimiter)
+                                .setRateLimiter(loginRedisRateLimiter)
                                 .setKeyResolver(resolver)))
                         .uri(properties.authServiceUrl()))
 
