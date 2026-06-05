@@ -12,13 +12,15 @@ import (
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/dto"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/event"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/repository"
+	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/stream"
 )
 
 type CameraService struct {
-	cameraRepo   *repository.CameraRepository
-	deviceRepo   *repository.DiscoveredDeviceRepository
-	contractRepo *repository.ConnectionContractRepository
-	publisher    event.Publisher
+	cameraRepo      *repository.CameraRepository
+	deviceRepo      *repository.DiscoveredDeviceRepository
+	contractRepo    *repository.ConnectionContractRepository
+	publisher       event.Publisher
+	streamValidator *stream.Validator
 }
 
 func NewCameraService(
@@ -26,12 +28,14 @@ func NewCameraService(
 	publisher event.Publisher,
 	deviceRepo *repository.DiscoveredDeviceRepository,
 	contractRepo *repository.ConnectionContractRepository,
+	streamValidator *stream.Validator,
 ) *CameraService {
 	return &CameraService{
-		cameraRepo:   cameraRepo,
-		publisher:    publisher,
-		deviceRepo:   deviceRepo,
-		contractRepo: contractRepo,
+		cameraRepo:      cameraRepo,
+		publisher:       publisher,
+		deviceRepo:      deviceRepo,
+		contractRepo:    contractRepo,
+		streamValidator: streamValidator,
 	}
 }
 
@@ -213,4 +217,49 @@ func (s *CameraService) GetConnectionByCameraID(
 	cameraID uuid.UUID,
 ) (*domain.CameraConnectionContract, error) {
 	return s.contractRepo.FindByCameraID(ctx, cameraID)
+}
+
+func (s *CameraService) ValidateStream(
+	ctx context.Context,
+	cameraID uuid.UUID,
+	userID *uuid.UUID,
+) (*dto.ValidateStreamResponse, error) {
+	camera, err := s.cameraRepo.FindByID(ctx, cameraID)
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := s.contractRepo.FindByCameraID(ctx, camera.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := s.streamValidator.Validate(contract)
+
+	if err := s.cameraRepo.UpdateStatus(ctx, camera.ID, result.Status, userID); err != nil {
+		return nil, err
+	}
+
+	if s.publisher != nil {
+		eventType := event.CameraOfflineEvent
+		if result.Status == domain.CameraStatusOnline {
+			eventType = event.CameraOnlineEvent
+		}
+
+		_ = s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
+			EventID:   uuid.New(),
+			EventType: eventType,
+			CameraID:  camera.ID,
+			UserID:    userID,
+			Timestamp: time.Now().UTC(),
+		})
+	}
+
+	return &dto.ValidateStreamResponse{
+		CameraID:       camera.ID.String(),
+		Status:         string(result.Status),
+		ConnectionType: string(contract.ConnectionType),
+		CheckedURL:     result.CheckedURL,
+		Message:        result.Message,
+	}, nil
 }

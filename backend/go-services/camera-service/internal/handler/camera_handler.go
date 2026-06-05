@@ -186,3 +186,31 @@ func (h *CameraHandler) GetConnection(c *gin.Context) {
 
 	response.OK(c, contract)
 }
+
+func (h *CameraHandler) ValidateStream(c *gin.Context) {
+	cameraID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "BAD_REQUEST", "INVALID_CAMERA_ID", "Invalid camera id")
+		return
+	}
+
+	userCtx := security.FromGin(c)
+
+	var userID *uuid.UUID
+	if userCtx != nil {
+		userID = userCtx.UserID
+	}
+
+	result, err := h.cameraService.ValidateStream(c.Request.Context(), cameraID, userID)
+	if errors.Is(err, repository.ErrCameraNotFound) {
+		response.Error(c, http.StatusNotFound, "NOT_FOUND", "CAMERA_NOT_FOUND", "Camera or connection not found")
+		return
+	}
+
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "STREAM_VALIDATION_FAILED", err.Error())
+		return
+	}
+
+	response.OK(c, result)
+}

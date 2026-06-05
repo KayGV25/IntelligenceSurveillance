@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/repository"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/router"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/service"
+	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/stream"
 )
 
 func main() {
@@ -29,6 +31,8 @@ func main() {
 	deviceRepo := repository.NewDiscoveredDeviceRepository(db)
 	contractRepo := repository.NewConnectionContractRepository(db)
 
+	streamValidator := stream.NewValidator(5 * time.Second)
+
 	eventPublisher := event.NewKafkaPublisher(cfg.RedpandaBrokers)
 	defer eventPublisher.Close()
 
@@ -37,6 +41,7 @@ func main() {
 		eventPublisher,
 		deviceRepo,
 		contractRepo,
+		streamValidator,
 	)
 	discoveryService := service.NewDiscoveryService(deviceRepo)
 	r := router.NewRouter(cameraService, discoveryService)
