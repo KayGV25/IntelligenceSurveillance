@@ -19,7 +19,7 @@ type Camera struct {
 	ID             uuid.UUID    `json:"id"`
 	Name           string       `json:"name"`
 	Description    *string      `json:"description"`
-	RTSPUrl        string       `json:"rtsp_url"`
+	RTSPUrl        *string      `json:"rtsp_url"`
 	Status         CameraStatus `json:"status"`
 	Latitude       *float64     `json:"latitude"`
 	Longitude      *float64     `json:"longitude"`

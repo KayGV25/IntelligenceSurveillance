@@ -5,7 +5,7 @@ import "github.com/google/uuid"
 type CreateCameraRequest struct {
 	Name           string     `json:"name" binding:"required"`
 	Description    *string    `json:"description"`
-	RTSPUrl        string     `json:"rtsp_url" binding:"required"`
+	RTSPUrl        *string    `json:"rtsp_url"`
 	Latitude       *float64   `json:"latitude"`
 	Longitude      *float64   `json:"longitude"`
 	BuildingID     *uuid.UUID `json:"building_id"`

@@ -128,3 +128,61 @@ func (h *CameraHandler) Update(c *gin.Context) {
 
 	response.OK(c, camera)
 }
+
+func (h *CameraHandler) ConnectDiscoveredDevice(c *gin.Context) {
+	discoveredDeviceID, err := uuid.Parse(c.Param("discoveredDeviceId"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "BAD_REQUEST", "INVALID_DISCOVERED_DEVICE_ID", "Invalid discovered device id")
+		return
+	}
+
+	var req dto.ConnectDiscoveredDeviceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "BAD_REQUEST", "INVALID_CONNECT_REQUEST", err.Error())
+		return
+	}
+
+	userCtx := security.FromGin(c)
+
+	var userID *uuid.UUID
+	if userCtx != nil {
+		userID = userCtx.UserID
+	}
+
+	camera, contract, err := h.cameraService.ConnectDiscoveredDevice(
+		c.Request.Context(),
+		discoveredDeviceID,
+		req,
+		userID,
+	)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "CONNECT_DISCOVERED_DEVICE_FAILED", err.Error())
+		return
+	}
+
+	response.Created(c, gin.H{
+		"camera":   camera,
+		"contract": contract,
+	})
+}
+
+func (h *CameraHandler) GetConnection(c *gin.Context) {
+	cameraID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "BAD_REQUEST", "INVALID_CAMERA_ID", "Invalid camera id")
+		return
+	}
+
+	contract, err := h.cameraService.GetConnectionByCameraID(c.Request.Context(), cameraID)
+	if errors.Is(err, repository.ErrCameraNotFound) {
+		response.Error(c, http.StatusNotFound, "NOT_FOUND", "CAMERA_CONNECTION_NOT_FOUND", "Camera connection not found")
+		return
+	}
+
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "CAMERA_CONNECTION_GET_FAILED", err.Error())
+		return
+	}
+
+	response.OK(c, contract)
+}

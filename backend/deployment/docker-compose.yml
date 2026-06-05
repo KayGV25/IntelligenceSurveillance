@@ -196,6 +196,9 @@ services:
 
       REDIS_HOST: redis
       REDIS_PORT: 6379
+
+      ACCESS_TOKEN_MINUTES: 60
+      REFRESH_TOKEN_DAYS: 30
     ports:
       - "8081:8081"
     depends_on:
