@@ -26,12 +26,20 @@ func main() {
 	defer db.Close()
 
 	cameraRepo := repository.NewCameraRepository(db)
+	deviceRepo := repository.NewDiscoveredDeviceRepository(db)
+	contractRepo := repository.NewConnectionContractRepository(db)
+
 	eventPublisher := event.NewKafkaPublisher(cfg.RedpandaBrokers)
 	defer eventPublisher.Close()
 
-	cameraService := service.NewCameraService(cameraRepo, eventPublisher)
-
-	r := router.NewRouter(cameraService)
+	cameraService := service.NewCameraService(
+		cameraRepo,
+		eventPublisher,
+		deviceRepo,
+		contractRepo,
+	)
+	discoveryService := service.NewDiscoveryService(deviceRepo)
+	r := router.NewRouter(cameraService, discoveryService)
 
 	addr := fmt.Sprintf(":%s", cfg.AppPort)
 

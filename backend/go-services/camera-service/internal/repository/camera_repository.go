@@ -300,7 +300,7 @@ func (r *CameraRepository) Update(
 	}
 
 	if req.RTSPUrl != nil {
-		existing.RTSPUrl = *req.RTSPUrl
+		existing.RTSPUrl = req.RTSPUrl
 	}
 
 	if req.Latitude != nil {
