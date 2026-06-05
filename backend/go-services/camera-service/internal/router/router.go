@@ -28,6 +28,7 @@ func NewRouter(
 
 		api.POST("/cameras/discovered/:discoveredDeviceId/connect", cameraHandler.ConnectDiscoveredDevice)
 		api.GET("/cameras/:id/connection", cameraHandler.GetConnection)
+		api.POST("/cameras/:id/validate-stream", cameraHandler.ValidateStream)
 
 		api.POST("/cameras", cameraHandler.Create)
 		api.GET("/cameras", cameraHandler.GetAll)

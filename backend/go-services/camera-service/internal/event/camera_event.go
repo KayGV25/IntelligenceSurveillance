@@ -10,6 +10,8 @@ const (
 	CameraCreatedEvent = "camera.created"
 	CameraUpdatedEvent = "camera.updated"
 	CameraDeletedEvent = "camera.deleted"
+	CameraOnlineEvent  = "camera.online"
+	CameraOfflineEvent = "camera.offline"
 )
 
 type CameraEvent struct {

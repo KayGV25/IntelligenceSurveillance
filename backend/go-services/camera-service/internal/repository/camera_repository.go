@@ -425,3 +425,31 @@ func (r *CameraRepository) Update(
 
 	return camera, nil
 }
+
+func (r *CameraRepository) UpdateStatus(
+	ctx context.Context,
+	id uuid.UUID,
+	status domain.CameraStatus,
+	updatedBy *uuid.UUID,
+) error {
+	query := `
+		UPDATE camera.cameras
+		SET
+			status = $2,
+			updated_by = $3,
+			updated_at = now()
+		WHERE id = $1
+		AND deleted_at IS NULL
+	`
+
+	tag, err := r.db.Exec(ctx, query, id, status, updatedBy)
+	if err != nil {
+		return err
+	}
+
+	if tag.RowsAffected() == 0 {
+		return ErrCameraNotFound
+	}
+
+	return nil
+}
