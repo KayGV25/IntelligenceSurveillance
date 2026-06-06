@@ -12,6 +12,7 @@ import (
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/dto"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/event"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/repository"
+	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/snapshot"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/stream"
 )
 
@@ -21,6 +22,7 @@ type CameraService struct {
 	contractRepo    *repository.ConnectionContractRepository
 	publisher       event.Publisher
 	streamValidator *stream.Validator
+	snapshotService *snapshot.Service
 }
 
 func NewCameraService(
@@ -29,6 +31,7 @@ func NewCameraService(
 	deviceRepo *repository.DiscoveredDeviceRepository,
 	contractRepo *repository.ConnectionContractRepository,
 	streamValidator *stream.Validator,
+	snapshotService *snapshot.Service,
 ) *CameraService {
 	return &CameraService{
 		cameraRepo:      cameraRepo,
@@ -36,6 +39,7 @@ func NewCameraService(
 		deviceRepo:      deviceRepo,
 		contractRepo:    contractRepo,
 		streamValidator: streamValidator,
+		snapshotService: snapshotService,
 	}
 }
 
@@ -261,5 +265,132 @@ func (s *CameraService) ValidateStream(
 		ConnectionType: string(contract.ConnectionType),
 		CheckedURL:     result.CheckedURL,
 		Message:        result.Message,
+	}, nil
+}
+
+func (s *CameraService) CaptureSnapshot(
+	ctx context.Context,
+	cameraID uuid.UUID,
+) (*dto.SnapshotResponse, error) {
+	camera, err := s.cameraRepo.FindByID(ctx, cameraID)
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := s.contractRepo.FindByCameraID(ctx, camera.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	objectPath, contentType, err := s.snapshotService.Capture(ctx, camera.ID, contract)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.SnapshotResponse{
+		CameraID:    camera.ID.String(),
+		ObjectPath:  objectPath,
+		ContentType: contentType,
+		Message:     "Snapshot captured successfully",
+	}, nil
+}
+
+func (s *CameraService) GetHealth(
+	ctx context.Context,
+	cameraID uuid.UUID,
+) (*dto.CameraHealthResponse, error) {
+	camera, err := s.cameraRepo.FindByID(ctx, cameraID)
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := s.contractRepo.FindByCameraID(ctx, camera.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	message := "Camera status is unknown"
+	switch camera.Status {
+	case domain.CameraStatusOnline:
+		message = "Camera is online"
+	case domain.CameraStatusOffline:
+		message = "Camera is offline"
+	case domain.CameraStatusDegraded:
+		message = "Camera is degraded"
+	}
+
+	return &dto.CameraHealthResponse{
+		CameraID:       camera.ID.String(),
+		Status:         string(camera.Status),
+		ConnectionType: string(contract.ConnectionType),
+		MainStreamURL:  contract.MainStreamURL,
+		SnapshotURL:    contract.SnapshotURL,
+		Message:        message,
+	}, nil
+}
+
+func (s *CameraService) GetStreamInfo(
+	ctx context.Context,
+	cameraID uuid.UUID,
+) (*dto.StreamInfoResponse, error) {
+	camera, err := s.cameraRepo.FindByID(ctx, cameraID)
+	if err != nil {
+		return nil, err
+	}
+
+	contract, err := s.contractRepo.FindByCameraID(ctx, camera.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	var streamMode string
+	var streamURL *string
+	requiresProxy := false
+	message := "Stream information available"
+
+	switch contract.ConnectionType {
+	case domain.ConnectionTypeHTTPMJPEG:
+		streamMode = "MJPEG"
+		streamURL = contract.MainStreamURL
+		requiresProxy = false
+
+	case domain.ConnectionTypeHTTPSnapshot:
+		streamMode = "SNAPSHOT"
+		streamURL = contract.SnapshotURL
+		requiresProxy = false
+
+	case domain.ConnectionTypeRTSPManual:
+		streamMode = "RTSP"
+		if contract.MainStreamURL != nil {
+			streamURL = contract.MainStreamURL
+		} else {
+			streamURL = contract.RTSPUrl
+		}
+		requiresProxy = true
+		message = "RTSP stream requires backend proxy/transcoding for browser playback"
+
+	case domain.ConnectionTypeONVIF:
+		streamMode = "ONVIF_RTSP"
+		if contract.MainStreamURL != nil {
+			streamURL = contract.MainStreamURL
+		} else {
+			streamURL = contract.RTSPUrl
+		}
+		requiresProxy = true
+		message = "ONVIF/RTSP stream requires backend proxy/transcoding for browser playback"
+
+	default:
+		streamMode = "UNKNOWN"
+		message = "Unsupported or unknown stream type"
+	}
+
+	return &dto.StreamInfoResponse{
+		CameraID:       camera.ID.String(),
+		ConnectionType: string(contract.ConnectionType),
+		StreamMode:     streamMode,
+		StreamURL:      streamURL,
+		SnapshotURL:    contract.SnapshotURL,
+		RequiresProxy:  requiresProxy,
+		Message:        message,
 	}, nil
 }

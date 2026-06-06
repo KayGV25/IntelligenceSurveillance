@@ -214,3 +214,66 @@ func (h *CameraHandler) ValidateStream(c *gin.Context) {
 
 	response.OK(c, result)
 }
+
+func (h *CameraHandler) CaptureSnapshot(c *gin.Context) {
+	cameraID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "BAD_REQUEST", "INVALID_CAMERA_ID", "Invalid camera id")
+		return
+	}
+
+	result, err := h.cameraService.CaptureSnapshot(c.Request.Context(), cameraID)
+	if errors.Is(err, repository.ErrCameraNotFound) {
+		response.Error(c, http.StatusNotFound, "NOT_FOUND", "CAMERA_NOT_FOUND", "Camera or connection not found")
+		return
+	}
+
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "SNAPSHOT_CAPTURE_FAILED", err.Error())
+		return
+	}
+
+	response.Created(c, result)
+}
+
+func (h *CameraHandler) GetHealth(c *gin.Context) {
+	cameraID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "BAD_REQUEST", "INVALID_CAMERA_ID", "Invalid camera id")
+		return
+	}
+
+	health, err := h.cameraService.GetHealth(c.Request.Context(), cameraID)
+	if errors.Is(err, repository.ErrCameraNotFound) {
+		response.Error(c, http.StatusNotFound, "NOT_FOUND", "CAMERA_NOT_FOUND", "Camera or connection not found")
+		return
+	}
+
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "CAMERA_HEALTH_GET_FAILED", err.Error())
+		return
+	}
+
+	response.OK(c, health)
+}
+
+func (h *CameraHandler) GetStreamInfo(c *gin.Context) {
+	cameraID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "BAD_REQUEST", "INVALID_CAMERA_ID", "Invalid camera id")
+		return
+	}
+
+	streamInfo, err := h.cameraService.GetStreamInfo(c.Request.Context(), cameraID)
+	if errors.Is(err, repository.ErrCameraNotFound) {
+		response.Error(c, http.StatusNotFound, "NOT_FOUND", "CAMERA_NOT_FOUND", "Camera or connection not found")
+		return
+	}
+
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "INTERNAL_ERROR", "STREAM_INFO_GET_FAILED", err.Error())
+		return
+	}
+
+	response.OK(c, streamInfo)
+}

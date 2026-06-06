@@ -3,8 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,7 +70,13 @@ func (s *DiscoveryService) DiscoverCIDR(
 					continue
 				}
 
-				fmt.Printf("saved discovered device %s\n", saved.IPAddress)
+				fmt.Printf("saved discovered device %s type=%s confidence=%.2f reason=%v\n",
+					saved.IPAddress,
+					saved.DeviceType,
+					saved.Confidence,
+					saved.DetectionReason,
+				)
+
 				results <- *saved
 			}
 		}()
@@ -105,27 +114,53 @@ func scanIP(ip string, ports []int, timeout time.Duration) (domain.DiscoveredDev
 	rtspSupported := false
 	onvifSupported := false
 
-	for _, port := range ports {
-		if canConnect(ip, port, timeout) {
-			p := port
+	deviceType := domain.DeviceTypeUnknown
+	confidence := 0.0
+	detectionReason := "no_camera_fingerprint_detected"
 
-			switch port {
-			case 554, 8554:
-				rtspSupported = true
-				rtspPort = &p
-			case 80, 443, 8000, 8080, 8899:
-				httpSupported = true
-				httpPort = &p
-			}
+	for _, port := range ports {
+		if !canConnect(ip, port, timeout) {
+			continue
+		}
+
+		p := port
+
+		switch port {
+		case 554, 8554:
+			rtspSupported = true
+			rtspPort = &p
+
+			deviceType = domain.DeviceTypePossibleCamera
+			confidence = maxConfidence(confidence, 0.5)
+			detectionReason = appendReason(detectionReason, "rtsp_port_open")
+
+		case 80, 443, 8000, 8080, 8899:
+			httpSupported = true
+			httpPort = &p
 
 			if port == 80 || port == 8899 || port == 8000 {
 				onvifSupported = true
 				onvifPort = &p
 			}
+
+			url := fmt.Sprintf("http://%s:%d/", ip, port)
+			fp := fingerprintHTTP(url, timeout)
+
+			if fp.Confidence > confidence {
+				deviceType = fp.DeviceType
+				confidence = fp.Confidence
+				detectionReason = fp.DetectionReason
+			}
 		}
 	}
 
 	if !httpSupported && !rtspSupported && !onvifSupported {
+		return domain.DiscoveredDevice{}, false
+	}
+
+	if deviceType != domain.DeviceTypeCamera &&
+		deviceType != domain.DeviceTypePossibleCamera &&
+		!rtspSupported {
 		return domain.DiscoveredDevice{}, false
 	}
 
@@ -139,7 +174,116 @@ func scanIP(ip string, ports []int, timeout time.Duration) (domain.DiscoveredDev
 		ONVIFPort:       onvifPort,
 		DiscoveryMethod: domain.DiscoveryMethodCIDRScan,
 		Status:          domain.DiscoveredDeviceStatusDiscovered,
+		DeviceType:      deviceType,
+		Confidence:      confidence,
+		DetectionReason: &detectionReason,
 	}, true
+}
+
+type FingerprintResult struct {
+	DeviceType      domain.DeviceType
+	Confidence      float64
+	DetectionReason string
+}
+
+func fingerprintHTTP(url string, timeout time.Duration) FingerprintResult {
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return FingerprintResult{
+			DeviceType:      domain.DeviceTypeUnknown,
+			Confidence:      0.1,
+			DetectionReason: "http_port_open_but_no_response",
+		}
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	body := strings.ToLower(string(bodyBytes))
+
+	server := strings.ToLower(resp.Header.Get("Server"))
+	auth := strings.ToLower(resp.Header.Get("WWW-Authenticate"))
+	contentType := strings.ToLower(resp.Header.Get("Content-Type"))
+
+	score := 0.0
+	reasons := make([]string, 0)
+
+	keywords := []string{
+		"ip webcam",
+		"ip camera",
+		"onvif",
+		"rtsp",
+		"mjpeg",
+		"video feed",
+		"videofeed",
+		"snapshot",
+		"shot.jpg",
+		"axis",
+		"hikvision",
+		"dahua",
+		"reolink",
+		"foscam",
+		"amcrest",
+		"vivotek",
+	}
+
+	for _, keyword := range keywords {
+		if strings.Contains(body, keyword) ||
+			strings.Contains(server, keyword) ||
+			strings.Contains(auth, keyword) {
+			score += 0.2
+			reasons = append(reasons, keyword)
+		}
+	}
+
+	if strings.Contains(body, "ip webcam") {
+		score += 0.5
+		reasons = append(reasons, "android_ip_webcam_detected")
+	}
+
+	if strings.Contains(body, "videofeed") ||
+		strings.Contains(body, "video") ||
+		strings.Contains(body, "shot.jpg") {
+		score += 0.3
+		reasons = append(reasons, "stream_endpoint_detected")
+	}
+
+	if strings.Contains(contentType, "multipart") ||
+		strings.Contains(contentType, "image/jpeg") {
+		score += 0.2
+		reasons = append(reasons, "camera_like_content_type")
+	}
+
+	if score > 1 {
+		score = 1
+	}
+
+	reason := strings.Join(reasons, ",")
+
+	if score >= 0.7 {
+		return FingerprintResult{
+			DeviceType:      domain.DeviceTypeCamera,
+			Confidence:      score,
+			DetectionReason: reason,
+		}
+	}
+
+	if score >= 0.3 {
+		return FingerprintResult{
+			DeviceType:      domain.DeviceTypePossibleCamera,
+			Confidence:      score,
+			DetectionReason: reason,
+		}
+	}
+
+	return FingerprintResult{
+		DeviceType:      domain.DeviceTypeNonCamera,
+		Confidence:      score,
+		DetectionReason: "no_camera_fingerprint_detected",
+	}
 }
 
 func canConnect(ip string, port int, timeout time.Duration) bool {
@@ -185,4 +329,20 @@ func incIP(ip net.IP) {
 			break
 		}
 	}
+}
+
+func maxConfidence(a float64, b float64) float64 {
+	if a > b {
+		return a
+	}
+
+	return b
+}
+
+func appendReason(existing string, reason string) string {
+	if existing == "" || existing == "no_camera_fingerprint_detected" {
+		return reason
+	}
+
+	return existing + "," + reason
 }
