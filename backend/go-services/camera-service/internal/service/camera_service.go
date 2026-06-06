@@ -57,7 +57,7 @@ func (s *CameraService) Create(
 		if err := s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
 			EventID:   uuid.New(),
 			EventType: event.CameraCreatedEvent,
-			CameraID:  camera.ID,
+			CameraID:  &camera.ID,
 			UserID:    createdBy,
 			Timestamp: time.Now().UTC(),
 		}); err != nil {
@@ -84,12 +84,12 @@ func (s *CameraService) Delete(ctx context.Context, id uuid.UUID, updatedBy *uui
 	if s.publisher != nil {
 		if err := s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
 			EventID:   uuid.New(),
-			EventType: event.CameraCreatedEvent,
-			CameraID:  id,
+			EventType: event.CameraDeletedEvent,
+			CameraID:  &id,
 			UserID:    updatedBy,
 			Timestamp: time.Now().UTC(),
 		}); err != nil {
-			log.Printf("failed to publish camera.created event: %v", err)
+			log.Printf("failed to publish camera.deleted event: %v", err)
 		}
 	}
 
@@ -110,12 +110,12 @@ func (s *CameraService) Update(
 	if s.publisher != nil {
 		if err := s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
 			EventID:   uuid.New(),
-			EventType: event.CameraCreatedEvent,
-			CameraID:  camera.ID,
+			EventType: event.CameraUpdatedEvent,
+			CameraID:  &camera.ID,
 			UserID:    updatedBy,
 			Timestamp: time.Now().UTC(),
 		}); err != nil {
-			log.Printf("failed to publish camera.created event: %v", err)
+			log.Printf("failed to publish camera.updated event: %v", err)
 		}
 	}
 
@@ -129,6 +129,10 @@ func (s *CameraService) ConnectDiscoveredDevice(
 	userID *uuid.UUID,
 ) (*domain.Camera, *domain.CameraConnectionContract, error) {
 	device, err := s.deviceRepo.FindByID(ctx, discoveredDeviceID)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	existingContract, err := s.contractRepo.FindByDiscoveredDeviceID(ctx, discoveredDeviceID)
 	if err != nil {
 		return nil, nil, err
@@ -204,13 +208,27 @@ func (s *CameraService) ConnectDiscoveredDevice(
 	}
 
 	if s.publisher != nil {
-		_ = s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
+		if err := s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
 			EventID:   uuid.New(),
 			EventType: event.CameraCreatedEvent,
-			CameraID:  camera.ID,
+			CameraID:  &camera.ID,
 			UserID:    userID,
 			Timestamp: time.Now().UTC(),
-		})
+		}); err != nil {
+			log.Printf("failed to publish camera.created event: %v", err)
+		}
+
+		if err := s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
+			EventID:            uuid.New(),
+			EventType:          event.CameraConnectedEvent,
+			CameraID:           &camera.ID,
+			DiscoveredDeviceID: &device.ID,
+			IPAddress:          device.IPAddress,
+			UserID:             userID,
+			Timestamp:          time.Now().UTC(),
+		}); err != nil {
+			log.Printf("failed to publish camera.connected event: %v", err)
+		}
 	}
 
 	return camera, contract, nil
@@ -253,7 +271,7 @@ func (s *CameraService) ValidateStream(
 		_ = s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
 			EventID:   uuid.New(),
 			EventType: eventType,
-			CameraID:  camera.ID,
+			CameraID:  &camera.ID,
 			UserID:    userID,
 			Timestamp: time.Now().UTC(),
 		})

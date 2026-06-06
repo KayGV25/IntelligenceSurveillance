@@ -36,8 +36,18 @@ func (p *KafkaPublisher) PublishCameraEvent(ctx context.Context, event CameraEve
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	key := event.EventID.String()
+
+	if event.CameraID != nil {
+		key = event.CameraID.String()
+	} else if event.DiscoveredDeviceID != nil {
+		key = event.DiscoveredDeviceID.String()
+	} else if event.IPAddress != "" {
+		key = event.IPAddress
+	}
+
 	return p.writer.WriteMessages(ctx, kafka.Message{
-		Key:   []byte(event.CameraID.String()),
+		Key:   []byte(key),
 		Value: payload,
 		Time:  event.Timestamp,
 	})

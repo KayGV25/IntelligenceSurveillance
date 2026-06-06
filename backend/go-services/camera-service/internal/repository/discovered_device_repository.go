@@ -220,3 +220,84 @@ func (r *DiscoveredDeviceRepository) FindByID(
 
 	return device, nil
 }
+
+func (r *DiscoveredDeviceRepository) FindAll(
+	ctx context.Context,
+) ([]domain.DiscoveredDevice, error) {
+	query := `
+		SELECT
+			id,
+			ip_address,
+			mac_address,
+			hostname,
+			manufacturer,
+			model,
+			firmware_version,
+			onvif_supported,
+			rtsp_supported,
+			http_supported,
+			http_port,
+			rtsp_port,
+			onvif_port,
+			discovery_method,
+			status,
+			device_type,
+			confidence,
+			detection_reason,
+			discovered_at,
+			last_seen_at,
+			created_at,
+			updated_at
+		FROM camera.discovered_devices
+		ORDER BY last_seen_at DESC NULLS LAST, discovered_at DESC
+	`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	devices := make([]domain.DiscoveredDevice, 0)
+
+	for rows.Next() {
+		var device domain.DiscoveredDevice
+
+		err := rows.Scan(
+			&device.ID,
+			&device.IPAddress,
+			&device.MACAddress,
+			&device.Hostname,
+			&device.Manufacturer,
+			&device.Model,
+			&device.FirmwareVersion,
+			&device.ONVIFSupported,
+			&device.RTSPSupported,
+			&device.HTTPSupported,
+			&device.HTTPPort,
+			&device.RTSPPort,
+			&device.ONVIFPort,
+			&device.DiscoveryMethod,
+			&device.Status,
+			&device.DeviceType,
+			&device.Confidence,
+			&device.DetectionReason,
+			&device.DiscoveredAt,
+			&device.LastSeenAt,
+			&device.CreatedAt,
+			&device.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		devices = append(devices, device)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return devices, nil
+}
