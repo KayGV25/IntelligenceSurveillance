@@ -13,15 +13,24 @@ import (
 
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/domain"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/dto"
+	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/event"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/repository"
+	"github.com/google/uuid"
 )
 
 type DiscoveryService struct {
 	deviceRepo *repository.DiscoveredDeviceRepository
+	publisher  event.Publisher
 }
 
-func NewDiscoveryService(deviceRepo *repository.DiscoveredDeviceRepository) *DiscoveryService {
-	return &DiscoveryService{deviceRepo: deviceRepo}
+func NewDiscoveryService(
+	deviceRepo *repository.DiscoveredDeviceRepository,
+	publisher event.Publisher,
+) *DiscoveryService {
+	return &DiscoveryService{
+		deviceRepo: deviceRepo,
+		publisher:  publisher,
+	}
 }
 
 func (s *DiscoveryService) DiscoverCIDR(
@@ -77,6 +86,18 @@ func (s *DiscoveryService) DiscoverCIDR(
 					saved.DetectionReason,
 				)
 
+				if s.publisher != nil {
+					if err := s.publisher.PublishCameraEvent(ctx, event.CameraEvent{
+						EventID:            uuid.New(),
+						EventType:          event.CameraDiscoveredEvent,
+						DiscoveredDeviceID: &saved.ID,
+						IPAddress:          saved.IPAddress,
+						Timestamp:          time.Now().UTC(),
+					}); err != nil {
+						fmt.Printf("failed to publish camera.discovered event for %s: %v\n", saved.IPAddress, err)
+					}
+				}
+
 				results <- *saved
 			}
 		}()
@@ -103,6 +124,19 @@ func (s *DiscoveryService) DiscoverCIDR(
 	})
 
 	return devices, nil
+}
+
+func (s *DiscoveryService) GetDiscoveredDevices(
+	ctx context.Context,
+) ([]domain.DiscoveredDevice, error) {
+	return s.deviceRepo.FindAll(ctx)
+}
+
+func (s *DiscoveryService) GetDiscoveredDeviceByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*domain.DiscoveredDevice, error) {
+	return s.deviceRepo.FindByID(ctx, id)
 }
 
 func scanIP(ip string, ports []int, timeout time.Duration) (domain.DiscoveredDevice, bool) {

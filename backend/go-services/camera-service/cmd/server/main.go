@@ -53,7 +53,7 @@ func main() {
 		streamValidator,
 		snapshotService,
 	)
-	discoveryService := service.NewDiscoveryService(deviceRepo)
+	discoveryService := service.NewDiscoveryService(deviceRepo, eventPublisher)
 	r := router.NewRouter(cameraService, discoveryService)
 
 	addr := fmt.Sprintf(":%s", cfg.AppPort)

@@ -25,6 +25,8 @@ func NewRouter(
 	api := r.Group("/api/v1")
 	{
 		api.POST("/cameras/discover", discoveryHandler.Discover)
+		api.GET("/cameras/discovered", discoveryHandler.GetDiscoveredDevices)
+		api.GET("/cameras/discovered/:id", discoveryHandler.GetDiscoveredDeviceByID)
 
 		api.POST("/cameras/discovered/:discoveredDeviceId/connect", cameraHandler.ConnectDiscoveredDevice)
 		api.GET("/cameras/:id/connection", cameraHandler.GetConnection)
