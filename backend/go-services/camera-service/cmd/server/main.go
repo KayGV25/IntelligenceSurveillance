@@ -13,6 +13,8 @@ import (
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/repository"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/router"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/service"
+	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/snapshot"
+	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/storage"
 	"github.com/KayGV25/IntelligenceSurveillance/backend/go-services/camera-service/internal/stream"
 )
 
@@ -26,6 +28,13 @@ func main() {
 		log.Fatalf("failed to connect to postgres: %v", err)
 	}
 	defer db.Close()
+
+	storageClient, err := storage.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("failed to create minio client: %v", err)
+	}
+
+	snapshotService := snapshot.NewService(storageClient, 5*time.Second)
 
 	cameraRepo := repository.NewCameraRepository(db)
 	deviceRepo := repository.NewDiscoveredDeviceRepository(db)
@@ -42,6 +51,7 @@ func main() {
 		deviceRepo,
 		contractRepo,
 		streamValidator,
+		snapshotService,
 	)
 	discoveryService := service.NewDiscoveryService(deviceRepo)
 	r := router.NewRouter(cameraService, discoveryService)

@@ -42,6 +42,9 @@ func (r *DiscoveredDeviceRepository) Upsert(
 			onvif_port,
 			discovery_method,
 			status,
+			device_type,
+			confidence,
+			detection_reason,
 			discovered_at,
 			last_seen_at
 		)
@@ -49,6 +52,7 @@ func (r *DiscoveredDeviceRepository) Upsert(
 			$1, $2, $3, $4, $5,
 			$6, $7, $8, $9, $10,
 			$11, $12, $13, $14, $15,
+			$16, $17, $18,
 			now(), now()
 		)
 		ON CONFLICT (ip_address)
@@ -66,6 +70,9 @@ func (r *DiscoveredDeviceRepository) Upsert(
 			onvif_port = EXCLUDED.onvif_port,
 			discovery_method = EXCLUDED.discovery_method,
 			status = EXCLUDED.status,
+			device_type = EXCLUDED.device_type,
+			confidence = EXCLUDED.confidence,
+			detection_reason = EXCLUDED.detection_reason,	
 			last_seen_at = now(),
 			updated_at = now()
 		RETURNING
@@ -84,6 +91,9 @@ func (r *DiscoveredDeviceRepository) Upsert(
 			onvif_port,
 			discovery_method,
 			status,
+			device_type,
+			confidence,
+			detection_reason,
 			discovered_at,
 			last_seen_at,
 			created_at,
@@ -110,6 +120,9 @@ func (r *DiscoveredDeviceRepository) Upsert(
 		device.ONVIFPort,
 		device.DiscoveryMethod,
 		device.Status,
+		device.DeviceType,
+		device.Confidence,
+		device.DetectionReason,
 	).Scan(
 		&saved.ID,
 		&saved.IPAddress,
@@ -126,6 +139,9 @@ func (r *DiscoveredDeviceRepository) Upsert(
 		&saved.ONVIFPort,
 		&saved.DiscoveryMethod,
 		&saved.Status,
+		&saved.DeviceType,
+		&saved.Confidence,
+		&saved.DetectionReason,
 		&saved.DiscoveredAt,
 		&saved.LastSeenAt,
 		&saved.CreatedAt,
@@ -160,6 +176,9 @@ func (r *DiscoveredDeviceRepository) FindByID(
 			onvif_port,
 			discovery_method,
 			status,
+			device_type,
+			confidence,
+			detection_reason,
 			discovered_at,
 			last_seen_at,
 			created_at,
@@ -186,6 +205,9 @@ func (r *DiscoveredDeviceRepository) FindByID(
 		&device.ONVIFPort,
 		&device.DiscoveryMethod,
 		&device.Status,
+		&device.DeviceType,
+		&device.Confidence,
+		&device.DetectionReason,
 		&device.DiscoveredAt,
 		&device.LastSeenAt,
 		&device.CreatedAt,

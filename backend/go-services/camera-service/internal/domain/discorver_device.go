@@ -22,6 +22,15 @@ const (
 	DiscoveredDeviceStatusIgnored    DiscoveredDeviceStatus = "IGNORED"
 )
 
+type DeviceType string
+
+const (
+	DeviceTypeCamera         DeviceType = "CAMERA"
+	DeviceTypePossibleCamera DeviceType = "POSSIBLE_CAMERA"
+	DeviceTypeNonCamera      DeviceType = "NON_CAMERA"
+	DeviceTypeUnknown        DeviceType = "UNKNOWN"
+)
+
 type DiscoveredDevice struct {
 	ID              uuid.UUID              `json:"id"`
 	IPAddress       string                 `json:"ip_address"`
@@ -38,6 +47,9 @@ type DiscoveredDevice struct {
 	ONVIFPort       *int                   `json:"onvif_port"`
 	DiscoveryMethod DiscoveryMethod        `json:"discovery_method"`
 	Status          DiscoveredDeviceStatus `json:"status"`
+	DeviceType      DeviceType             `json:"device_type"`
+	Confidence      float64                `json:"confidence"`
+	DetectionReason *string                `json:"detection_reason"`
 	DiscoveredAt    time.Time              `json:"discovered_at"`
 	LastSeenAt      *time.Time             `json:"last_seen_at"`
 	CreatedAt       time.Time              `json:"created_at"`

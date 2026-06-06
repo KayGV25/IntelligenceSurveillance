@@ -15,6 +15,12 @@ type Config struct {
 	DBSSLMode  string
 
 	RedpandaBrokers string
+
+	MinIOEndpoint        string
+	MinIOAccessKey       string
+	MinIOSecretKey       string
+	MinIOSnapshotsBucket string
+	MinIOUseSSL          bool
 }
 
 func Load() *Config {
@@ -29,6 +35,12 @@ func Load() *Config {
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 
 		RedpandaBrokers: getEnv("REDPANDA_BROKERS", "localhost:9092"),
+
+		MinIOEndpoint:        getEnv("MINIO_ENDPOINT", "localhost:9000"),
+		MinIOAccessKey:       getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+		MinIOSecretKey:       getEnv("MINIO_SECRET_KEY", "minioadmin123"),
+		MinIOSnapshotsBucket: getEnv("MINIO_SNAPSHOTS_BUCKET", "snapshots"),
+		MinIOUseSSL:          getEnv("MINIO_USE_SSL", "false") == "true",
 	}
 }
 
