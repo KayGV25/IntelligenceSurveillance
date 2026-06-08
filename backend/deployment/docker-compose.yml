@@ -242,6 +242,29 @@ services:
     networks:
       - ahs-network
 
+  map-service:
+    build:
+      context: ../go-services/map-service
+      dockerfile: Dockerfile
+    container_name: ahs-map-service
+    restart: unless-stopped
+    ports:
+      - "8105:8105"
+    environment:
+      APP_PORT: 8105
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_SSLMODE: disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ahs-network
+
 volumes:
   postgres_data:
   redis_data:
