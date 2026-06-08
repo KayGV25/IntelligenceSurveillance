@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS camera.cameras (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    rtsp_url TEXT NOT NULL,
+    rtsp_url TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'UNKNOWN',
 
     latitude DOUBLE PRECISION,

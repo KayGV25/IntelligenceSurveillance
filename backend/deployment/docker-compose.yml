@@ -87,6 +87,21 @@ services:
       - "${REDPANDA_CONSOLE_PORT}:8088"
     networks:
       - ahs-network
+  
+  redpanda-init:
+    image: redpandadata/redpanda:v26.1.9
+    container_name: ahs-redpanda-init
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "
+      rpk topic create camera.events --brokers redpanda:9092 || true;
+      exit 0;
+      "
+    networks:
+      - ahs-network
 
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z
@@ -237,6 +252,8 @@ services:
         condition: service_healthy
       redpanda:
         condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
       minio:
         condition: service_healthy
     networks:
