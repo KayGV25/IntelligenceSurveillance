@@ -91,7 +91,7 @@ func (h *ZoneHandler) GetByID(c *gin.Context) {
 }
 
 func (h *ZoneHandler) GetByFloorID(c *gin.Context) {
-	floorID, err := uuid.Parse(c.Param("floorId"))
+	floorID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "BAD_REQUEST", "INVALID_FLOOR_ID", "Invalid floor id")
 		return

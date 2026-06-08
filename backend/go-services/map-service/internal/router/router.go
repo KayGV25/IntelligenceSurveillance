@@ -44,7 +44,7 @@ func NewRouter(
 		maps.PUT("/zones/:id", zoneHandler.Update)
 		maps.DELETE("/zones/:id", zoneHandler.Delete)
 
-		maps.GET("/floors/:floorId/zones", zoneHandler.GetByFloorID)
+		maps.GET("/floors/:id/zones", zoneHandler.GetByFloorID)
 	}
 
 	return r
