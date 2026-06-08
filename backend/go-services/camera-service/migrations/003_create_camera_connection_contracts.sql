@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS camera.camera_connection_contracts (
     connection_type VARCHAR(50) NOT NULL,
 
     ip_address VARCHAR(100) NOT NULL,
-    rtsp_url TEXT NOT NULL,
+    rtsp_url TEXT,
     onvif_url TEXT,
 
     username VARCHAR(255),
